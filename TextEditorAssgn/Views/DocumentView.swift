@@ -10,7 +10,7 @@ import AppKit
 
 struct DocumentView: View {
     @ObservedObject var viewModel: DocumentViewModel
-    @State private var textContent = "Start typing your document here..."
+    //@State private var textContent = "Start typing your document here..."
     
     var body: some View {
         GeometryReader { geometry in
@@ -25,16 +25,19 @@ struct DocumentView: View {
                             .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                         
                         VStack {
-                            TextEditor(text: $textContent)
-                                .font(documentFont)
-                                .foregroundColor(viewModel.document.textColor)
-                                .lineSpacing(viewModel.document.lineSpacing * 3)
+//                            TextEditor(text: $textContent)
+//                                .font(documentFont)
+//                                .foregroundColor(viewModel.document.textColor)
+//                                .lineSpacing(viewModel.document.lineSpacing * 3)
+//                                .padding(50)
+//                                .background(Color.white)
+//                                .scrollContentBackground(.hidden)
+//                                .onChange(of: textContent) { newValue in
+//                                    viewModel.updateContent(newValue)
+//                                }
+                            RichTextEditor(viewModel: viewModel)
                                 .padding(50)
                                 .background(Color.white)
-                                .scrollContentBackground(.hidden)
-                                .onChange(of: textContent) { newValue in
-                                    viewModel.updateContent(newValue)
-                                }
                         }
                     }
                     .frame(width: 609, height: 860) // A4 size at 72 DPI
@@ -72,3 +75,82 @@ struct DocumentView: View {
 }
 
 struct DocumentView_Previews: PreviewProvider { static var previews: some View { DocumentView(viewModel: DocumentViewModel()) } }
+
+
+
+// MARK: - Rich Text Editor View
+struct RichTextEditor: NSViewRepresentable {
+    @ObservedObject var viewModel: DocumentViewModel
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = false
+        scrollView.borderType = .noBorder
+        scrollView.backgroundColor = .white
+
+        let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 400, height: 600))
+        textView.autoresizingMask = [.width]
+        textView.delegate = context.coordinator
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.allowsUndo = true
+        textView.isRichText = true
+        textView.usesFontPanel = true
+        textView.usesRuler = true
+        textView.drawsBackground = true
+        textView.backgroundColor = NSColor.white
+        textView.textColor = NSColor.black
+        textView.font = NSFont.systemFont(ofSize: 13)
+
+        if viewModel.attributedString.length == 0 {
+            viewModel.attributedString = NSMutableAttributedString(string: "Welcome to RichTextEditor!", attributes: [
+                .foregroundColor: NSColor.black,
+                .font: NSFont.systemFont(ofSize: 13)
+            ])
+        }
+
+        textView.textStorage?.setAttributedString(viewModel.attributedString)
+
+        viewModel.setTextView(textView)
+
+        scrollView.documentView = textView
+        return scrollView
+    }
+
+
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        // handled via delegate
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: RichTextEditor
+
+        init(_ parent: RichTextEditor) {
+            self.parent = parent
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+
+            DispatchQueue.main.async {
+                self.parent.viewModel.document.content = textView.string
+                self.parent.viewModel.attributedString = NSMutableAttributedString(attributedString: textView.attributedString())
+            }
+        }
+
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+
+            DispatchQueue.main.async {
+                self.parent.viewModel.selectedRange = textView.selectedRange()
+                self.parent.viewModel.updateFormattingFromSelection()
+            }
+        }
+    }
+}

@@ -56,7 +56,14 @@ struct SpacingSection: View {
                         .frame(maxWidth: .infinity)
                         
                         HStack(spacing: 4) {
-                            TextField("", value: .constant(viewModel.document.lineSpacing), format: .number)
+                            TextField("", text: Binding(
+                                get: { String(format: "%.1f", viewModel.document.lineSpacing) },
+                                set: { newValue in
+                                    if let spacing = Double(newValue) {
+                                        viewModel.updateLineSpacing(CGFloat(spacing))
+                                    }
+                                }
+                            ))
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .frame(width: 40)
                             
@@ -84,7 +91,14 @@ struct SpacingSection: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
                         HStack(spacing: 4) {
-                            TextField("", value: .constant(viewModel.document.paragraphSpacingBefore), format: .number)
+                            TextField("", text: Binding(
+                                get: { String(format: "%.0f", viewModel.document.paragraphSpacingBefore) },
+                                set: { newValue in
+                                    if let spacing = Float(newValue) {
+                                        viewModel.updateParagraphSpacingBefore(CGFloat(spacing))
+                                    }
+                                }
+                            ))
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .frame(width: 40)
                             
@@ -116,7 +130,14 @@ struct SpacingSection: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
                         HStack(spacing: 4) {
-                            TextField("", value: .constant(viewModel.document.paragraphSpacingAfter), format: .number)
+                            TextField("", text: Binding(
+                                get: { String(format: "%.0f", viewModel.document.paragraphSpacingAfter) },
+                                set: { newValue in
+                                    if let spacing = Float(newValue) {
+                                        viewModel.updateParagraphSpacingAfter(CGFloat(spacing))
+                                    }
+                                }
+                            ))
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .frame(width: 40)
                             
@@ -144,4 +165,6 @@ struct SpacingSection: View {
         }
     }
 }
+
+
 struct SpacingSection_Previews: PreviewProvider { static var previews: some View { SpacingSection(viewModel: DocumentViewModel()) } }

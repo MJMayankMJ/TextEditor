@@ -8,22 +8,23 @@
 import SwiftUI
 import AppKit
 
-
-struct StyleButton: View {
-    let icon: String
-    let isActive: Bool
-    let action: () -> Void
+struct StyleTabView: View {
+    @ObservedObject var viewModel: DocumentViewModel
     
     var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .foregroundColor(isActive ? .white : .primary)
-                .font(.system(size: 12, weight: .medium))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Font Section
+                FontSection(viewModel: viewModel)
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Spacing Section
+                SpacingSection(viewModel: viewModel)
+            }
+            .padding(16)
         }
-        .buttonStyle(BorderlessButtonStyle())
-        .frame(width: 28, height: 24)
-        .background(isActive ? Color.accentColor : Color(NSColor.controlColor))
-        .cornerRadius(4)
     }
 }
 

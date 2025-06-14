@@ -46,12 +46,12 @@ struct FontSection: View {
                 Menu {
                     ForEach(viewModel.fontWeights, id: \.self) { weight in
                         Button(weight) {
-                            // Handle font weight
+                            viewModel.updateFontWeight(weight)
                         }
                     }
                 } label: {
                     HStack {
-                        Text("Regular")
+                        Text(viewModel.selectedFontWeight)
                             .font(.system(size: 12))
                             .foregroundColor(.primary)
                         Spacer()
@@ -69,7 +69,14 @@ struct FontSection: View {
                 
                 // Font Size
                 HStack(spacing: 4) {
-                    TextField("Size", value: .constant(viewModel.document.fontSize), format: .number)
+                    TextField("Size", text: Binding(
+                        get: { String(format: "%.0f", viewModel.document.fontSize) },
+                        set: { newValue in
+                            if let fontSize = Float(newValue) {
+                                viewModel.updateFontSize(CGFloat(fontSize))
+                            }
+                        }
+                    ))
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(width: 40)
                     
@@ -128,13 +135,44 @@ struct FontSection: View {
                     .foregroundColor(.secondary)
                 
                 Menu {
-                    Button("None") {}
-                    Button("Title") {}
-                    Button("Heading") {}
-                    Button("Subheading") {}
+                    ForEach(CharacterStyle.allCases, id: \.self) { style in
+                        Button(style.rawValue) {
+                            viewModel.updateCharacterStyle(style)
+                        }
+                    }
                 } label: {
                     HStack {
-                        Text("None")
+                        Text(viewModel.document.characterStyle.rawValue)
+                            .font(.system(size: 12))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(NSColor.controlColor))
+                    .cornerRadius(4)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            
+            // Paragraph Styles
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Paragraph Styles")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+                
+                Menu {
+                    ForEach(ParagraphStyle.allCases, id: \.self) { style in
+                        Button(style.rawValue) {
+                            viewModel.updateParagraphStyle(style)
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(viewModel.document.paragraphStyle.rawValue)
                             .font(.system(size: 12))
                             .foregroundColor(.primary)
                         Spacer()
@@ -158,9 +196,12 @@ struct FontSection: View {
                 
                 Spacer()
                 
-                ColorPicker("", selection: $viewModel.document.textColor, supportsOpacity: false)
-                    .labelsHidden()
-                    .frame(width: 30, height: 20)
+                ColorPicker("", selection: Binding(
+                    get: { viewModel.document.textColor },
+                    set: { newColor in
+                        viewModel.updateTextColor(newColor)
+                    }
+                ), supportsOpacity: false)
             }
             
             // Alignment Buttons
@@ -206,5 +247,6 @@ struct FontSection: View {
         }
     }
 }
+
 
 struct FontSection_Previews: PreviewProvider { static var previews: some View { FontSection(viewModel: DocumentViewModel()) } }

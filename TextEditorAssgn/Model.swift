@@ -20,6 +20,8 @@ struct DocumentModel {
     var paragraphSpacingBefore: CGFloat = 0.0
     var paragraphSpacingAfter: CGFloat = 0.0
     var textAlignment: TextAlignment = .leading
+    var characterStyle: CharacterStyle = .none
+    var paragraphStyle: ParagraphStyle = .body
 }
 
 enum TextAlignment: String, CaseIterable {
@@ -34,6 +36,39 @@ enum TextAlignment: String, CaseIterable {
         case .center: return .center
         case .trailing: return .right
         case .justified: return .justified
+        }
+    }
+}
+
+enum CharacterStyle: String, CaseIterable {
+    case none = "None"
+    case emphasis = "Emphasis"
+    case strong = "Strong"
+    case code = "Code"
+    case quote = "Quote"
+}
+
+enum ParagraphStyle: String, CaseIterable {
+    case body = "Body"
+    case title = "Title"
+    case heading = "Heading"
+    case subheading = "Subheading"
+    case caption = "Caption"
+    
+    var fontSize: CGFloat {
+        switch self {
+        case .body: return 11
+        case .title: return 24
+        case .heading: return 18
+        case .subheading: return 14
+        case .caption: return 10
+        }
+    }
+    
+    var isBold: Bool {
+        switch self {
+        case .body, .caption: return false
+        case .title, .heading, .subheading: return true
         }
     }
 }
