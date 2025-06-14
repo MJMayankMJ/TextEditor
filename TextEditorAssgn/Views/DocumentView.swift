@@ -24,17 +24,10 @@ struct DocumentView: View {
                             .fill(Color.white)
                             .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                         
-                        VStack {
-//                            TextEditor(text: $textContent)
-//                                .font(documentFont)
-//                                .foregroundColor(viewModel.document.textColor)
-//                                .lineSpacing(viewModel.document.lineSpacing * 3)
+                        VStack(spacing: 30) {
+//                            PaginatedTextEditor(viewModel: viewModel)
 //                                .padding(50)
 //                                .background(Color.white)
-//                                .scrollContentBackground(.hidden)
-//                                .onChange(of: textContent) { newValue in
-//                                    viewModel.updateContent(newValue)
-//                                }
                             RichTextEditor(viewModel: viewModel)
                                 .padding(50)
                                 .background(Color.white)
@@ -78,7 +71,7 @@ struct DocumentView_Previews: PreviewProvider { static var previews: some View {
 
 
 
-// MARK: - Rich Text Editor View
+//// MARK: - Rich Text Editor View
 struct RichTextEditor: NSViewRepresentable {
     @ObservedObject var viewModel: DocumentViewModel
 
