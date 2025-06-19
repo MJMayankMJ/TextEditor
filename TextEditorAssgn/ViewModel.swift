@@ -13,6 +13,8 @@ class DocumentViewModel: ObservableObject {
     @Published var attributedString = NSMutableAttributedString()
     @Published var textView: NSTextView?
     
+    @Published var pageCount: Int = 10
+    
     let availableFonts = [
         "Helvetica Neue",
         "Times New Roman",
@@ -30,6 +32,8 @@ class DocumentViewModel: ObservableObject {
     init() {
         attributedString = NSMutableAttributedString(string: "Start typing your document here...")
         updateAttributedStringWithDefaultFormatting()
+        
+        pageCount = computePageCount(for: attributedString)
     }
     
     func setTextView(_ textView: NSTextView) {
@@ -178,11 +182,15 @@ class DocumentViewModel: ObservableObject {
         
         // Update typing attributes as well
         textView.typingAttributes = attributes
+        
+        refreshPageCount()
     }
     
     private func updateAttributedStringWithDefaultFormatting() {
         let attributes = createAttributes()
         attributedString.addAttributes(attributes, range: NSRange(location: 0, length: attributedString.length))
+        
+        refreshPageCount()
     }
     
     private func createAttributes() -> [NSAttributedString.Key: Any] {
@@ -287,4 +295,34 @@ class DocumentViewModel: ObservableObject {
             document.paragraphSpacingAfter = paragraphStyle.paragraphSpacing
         }
     }
+}
+
+extension DocumentViewModel {
+    private func refreshPageCount() {
+            pageCount = computePageCount(for: attributedString)
+        }
+
+        /// Measures how many pages of size (612×792 with 1" margins)
+        /// your current text will occupy.
+        private func computePageCount(for content: NSAttributedString) -> Int {
+            // 1) Build a temporary TextKit stack
+            let ts = NSTextStorage(attributedString: content)
+            let lm = NSLayoutManager()
+            ts.addLayoutManager(lm)
+
+            // 2) One container to measure how tall the content really is:
+            let pageSize = CGSize(width: 612 - 72, height: 792 - 72)  // minus 1" margins
+            let container = NSTextContainer(size: pageSize)
+            lm.addTextContainer(container)
+
+            // 3) Force layout and ask how much is used
+            lm.glyphRange(for: container)
+            let usedHeight = lm.usedRect(for: container).height
+
+            // 4) Divide by one page’s height, round up
+            let pages = Int(ceil(usedHeight / pageSize.height))
+            return max(1, pages)
+        }
+
+        
 }

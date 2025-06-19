@@ -6,341 +6,234 @@
 //
 
 
+
 import SwiftUI
 import AppKit
 
-/// A SwiftUI wrapper for a paginated NSTextView editor with seamless multi-page scrolling.
-//struct PaginatedTextEditor: NSViewRepresentable {
-//    @ObservedObject var viewModel: DocumentViewModel
-//
-//    func makeNSView(context: Context) -> NSScrollView {
-//        let scrollView = NSScrollView()
-//        scrollView.hasVerticalScroller = true
-//        scrollView.hasHorizontalScroller = false
-//        scrollView.borderType = .noBorder
-//        scrollView.drawsBackground = false
-//
-//        let container = NSView()
-//        scrollView.documentView = container
-//
-//        context.coordinator.containerView = container
-//        context.coordinator.setupTextStorage(using: viewModel.attributedString)
-//        context.coordinator.initialLayout()
-//
-//        return scrollView
-//    }
-//
-//    func updateNSView(_ nsView: NSScrollView, context: Context) {
-//        context.coordinator.updateTextStorage(with: viewModel.attributedString)
-//        context.coordinator.checkAndAddPagesIfNeeded()
-//    }
-//
-//    func makeCoordinator() -> Coordinator {
-//        Coordinator(self)
-//    }
-//
-//    class Coordinator: NSObject, NSTextViewDelegate {
-//        let parent: PaginatedTextEditor
-//        var containerView: NSView?
-//
-//        private let layoutManager = NSLayoutManager()
-//        private var textStorage: NSTextStorage!
-//
-//        private var textContainers: [NSTextContainer] = []
-//        private var pageScrolls: [NSScrollView] = []
-//
-//        /// A4 at 72 DPI
-//        private let pageSize = NSSize(width: 609, height: 860)
-//        private let pageSpacing: CGFloat = 40
-//        private let pagePadding: CGFloat = 20
-//
-//        init(_ parent: PaginatedTextEditor) {
-//            self.parent = parent
-//            super.init()
-//        }
-//
-//        func setupTextStorage(using attributed: NSAttributedString) {
-//            textStorage = NSTextStorage(attributedString: attributed)
-//            textStorage.addLayoutManager(layoutManager)
-//        }
-//
-//        func updateTextStorage(with attributed: NSAttributedString) {
-//            layoutManager.textStorage?.setAttributedString(attributed)
-//        }
-//
-//        /// Initial single-page setup
-//        func initialLayout() {
-//            guard let container = containerView else { return }
-//            // create first page
-//            addPage(at: 0)
-//            // size container
-//            layoutContainer()
-//        }
-//
-//        /// Checks last page for overflow; if there are more glyphs than fit, append a new page
-//        func checkAndAddPagesIfNeeded() {
-//            guard let lastContainer = textContainers.last else { return }
-//            // Range of glyphs in last page
-//            let glyphRange = layoutManager.glyphRange(for: lastContainer)
-//            // Total glyphs in document
-//            let totalGlyphs = layoutManager.numberOfGlyphs
-//            // If there are glyphs not yet on a page, add another
-//            if glyphRange.upperBound < totalGlyphs {
-//                addPage(at: textContainers.count)
-//                layoutContainer()
-//            }
-//        }
-//
-//        /// Add a new page at given index, offset vertically
-//        private func addPage(at index: Int) {
-//            guard let container = containerView else { return }
-//            let yOffset = CGFloat(index) * (pageSize.height + pageSpacing)
-//
-//            let textContainer = NSTextContainer(size: pageSize)
-//            textContainer.lineFragmentPadding = pagePadding
-//            layoutManager.addTextContainer(textContainer)
-//            textContainers.append(textContainer)
-//
-//            let textView = NSTextView(frame: NSRect(origin: .zero, size: pageSize), textContainer: textContainer)
-//            textView.isEditable = true
-//            textView.isSelectable = true
-//            textView.delegate = self
-//            textView.drawsBackground = true
-//            textView.backgroundColor = .white
-//            textView.font = NSFont.systemFont(ofSize: parent.viewModel.document.fontSize)
-//
-//            let pageScroll = NSScrollView(frame: NSRect(x: 0, y: yOffset,
-//                                                        width: pageSize.width,
-//                                                        height: pageSize.height))
-//            pageScroll.hasVerticalScroller = false
-//            pageScroll.hasHorizontalScroller = false
-//            pageScroll.drawsBackground = false
-//            pageScroll.documentView = textView
-//
-//            pageScroll.wantsLayer = true
-//            pageScroll.layer?.backgroundColor = NSColor.white.cgColor
-//            pageScroll.layer?.shadowColor = NSColor.black.withAlphaComponent(0.15).cgColor
-//            pageScroll.layer?.shadowRadius = 8
-//            pageScroll.layer?.shadowOffset = CGSize(width: 0, height: -4)
-//            pageScroll.layer?.shadowOpacity = 1
-//
-//            container.addSubview(pageScroll)
-//            pageScrolls.append(pageScroll)
-//
-//            parent.viewModel.setTextView(textView)
-//
-//            Task { @MainActor in
-//                await Task.yield()
-//                textView.window?.makeFirstResponder(textView)
-//            }
-//        }
-//
-//        /// Resize container to fit all pages
-//        private func layoutContainer() {
-//            guard let container = containerView else { return }
-//            let height = CGFloat(pageScrolls.count) * (pageSize.height + pageSpacing) - pageSpacing
-//            container.frame = NSRect(x: 0,
-//                                     y: 0,
-//                                     width: pageSize.width,
-//                                     height: height)
-//        }
-//
-//        // MARK: - NSTextViewDelegate
-//        func textDidChange(_ notification: Notification) {
-//            guard let textView = notification.object as? NSTextView else { return }
-//            parent.viewModel.attributedString = NSMutableAttributedString(attributedString: textView.attributedString())
-//            parent.viewModel.document.content = textView.string
-//            checkAndAddPagesIfNeeded()
-//        }
-//
-//        func textViewDidChangeSelection(_ notification: Notification) {
-//            guard let textView = notification.object as? NSTextView else { return }
-//            Task { @MainActor in
-//                await Task.yield()
-//                parent.viewModel.selectedRange = textView.selectedRange()
-//                parent.viewModel.updateFormattingFromSelection()
-//            }
-//        }
-//    }
-//}
-
-
-/// A SwiftUI wrapper for a paginated NSTextView editor with seamless multi-page scrolling.
-struct PaginatedTextEditor: NSViewRepresentable {
-    @ObservedObject var viewModel: DocumentViewModel
-
-    func makeNSView(context: Context) -> NSScrollView {
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
-        scrollView.borderType = .noBorder
-        scrollView.drawsBackground = false
-
-        // Post frame change notifications to detect when view is in window
-        scrollView.postsFrameChangedNotifications = true
-        NotificationCenter.default.addObserver(
-            forName: NSView.frameDidChangeNotification,
-            object: scrollView,
-            queue: nil
-        ) { _ in
-            // Once the scrollView is laid out in a window, focus the first text view
-            guard let firstTV = context.coordinator.firstTextView else { return }
-            Task { @MainActor in
-                await Task.yield()
-                firstTV.window?.makeFirstResponder(firstTV)
-            }
+// MARK: - Page View
+struct PageView: NSViewRepresentable {
+    let layoutManager: NSLayoutManager
+    let textContainer: NSTextContainer
+    let viewModel: DocumentViewModel
+    
+    func makeNSView(context: Context) -> NSTextView {
+        let textView = NSTextView(frame: .zero, textContainer: textContainer)
+        textView.isVerticallyResizable = false
+        textView.isHorizontallyResizable = false
+        textView.textContainerInset = .zero
+        textView.backgroundColor = .white
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.delegate = context.coordinator
+        textView.textContainer?.lineFragmentPadding = 10
+        
+        // Set the text view in the view model for formatting operations
+        viewModel.setTextView(textView)
+        
+        return textView
+    }
+    
+    func updateNSView(_ nsView: NSTextView, context: Context) {
+        // Ensure the text view is properly connected
+        if nsView.textStorage != layoutManager.textStorage {
+            nsView.layoutManager?.removeTextContainer(at: 0)
+            nsView.textContainer = textContainer
         }
-
-        let container = NSView()
-        scrollView.documentView = container
-
-        context.coordinator.containerView = container
-        // Initialize placeholder if needed
-if viewModel.attributedString.length == 0 {
-    viewModel.attributedString = NSMutableAttributedString(string: "Welcome to RichTextEditor!", attributes: [
-        .foregroundColor: NSColor.black,
-        .font: NSFont.systemFont(ofSize: 13)
-    ])
-}
-context.coordinator.setupTextStorage(using: viewModel.attributedString)
-        context.coordinator.initialLayout()
-
-        return scrollView
     }
-
-    func updateNSView(_ nsView: NSScrollView, context: Context) {
-        context.coordinator.updateTextStorage(with: viewModel.attributedString)
-        context.coordinator.checkAndAddPagesIfNeeded()
-    }
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-
+    
     class Coordinator: NSObject, NSTextViewDelegate {
-        let parent: PaginatedTextEditor
-        var containerView: NSView?
-        var firstTextView: NSTextView?  // to track for initial focus
-
-        private let layoutManager = NSLayoutManager()
-        private var textStorage: NSTextStorage!
-
-        private var textContainers: [NSTextContainer] = []
-        private var pageScrolls: [NSScrollView] = []
-
-        /// A4 at 72 DPI
-        private let pageSize = NSSize(width: 609, height: 860)
-        private let pageSpacing: CGFloat = 40
-        private let pagePadding: CGFloat = 20
-
-        init(_ parent: PaginatedTextEditor) {
+        let parent: PageView
+        
+        init(_ parent: PageView) {
             self.parent = parent
-            super.init()
         }
-
-        func setupTextStorage(using attributed: NSAttributedString) {
-            textStorage = NSTextStorage(attributedString: attributed)
-            textStorage.addLayoutManager(layoutManager)
-        }
-
-        func updateTextStorage(with attributed: NSAttributedString) {
-            layoutManager.textStorage?.setAttributedString(attributed)
-        }
-
-        /// Initial single-page setup
-        func initialLayout() {
-            addPage(at: 0)
-            layoutContainer()
-        }
-
-        /// Checks last page for overflow; if there are more glyphs than fit, append a new page
-        func checkAndAddPagesIfNeeded() {
-            guard let lastContainer = textContainers.last else { return }
-            let glyphRange = layoutManager.glyphRange(for: lastContainer)
-            let totalGlyphs = layoutManager.numberOfGlyphs
-            if glyphRange.upperBound < totalGlyphs {
-                addPage(at: textContainers.count)
-                layoutContainer()
-            }
-        }
-
-        /// Add a new page at given index, offset vertically
-        private func addPage(at index: Int) {
-            guard let container = containerView else { return }
-            let yOffset = CGFloat(index) * (pageSize.height + pageSpacing)
-
-            let textContainer = NSTextContainer(size: pageSize)
-            textContainer.lineFragmentPadding = pagePadding
-            layoutManager.addTextContainer(textContainer)
-            textContainers.append(textContainer)
-
-            let textView = NSTextView(frame: NSRect(origin: .zero, size: pageSize), textContainer: textContainer)
-            textView.autoresizingMask = [.width, .height]
-            textView.delegate = self
-            textView.isEditable = true
-            textView.isSelectable = true
-            textView.allowsUndo = true
-            textView.isRichText = true
-            textView.usesFontPanel = true
-            textView.usesRuler = true
-            textView.drawsBackground = true
-            textView.backgroundColor = .white
-            textView.textColor = .black
-            textView.font = NSFont(name: parent.viewModel.document.fontName,
-                                   size: parent.viewModel.document.fontSize)
-                         ?? .systemFont(ofSize: parent.viewModel.document.fontSize)
-
-            // Track the first page's textView
-            if index == 0 {
-                firstTextView = textView
-            }
-
-            let pageScroll = NSScrollView(frame: NSRect(x: 0, y: yOffset,
-                                                        width: pageSize.width,
-                                                        height: pageSize.height))
-            pageScroll.hasVerticalScroller = false
-            pageScroll.hasHorizontalScroller = false
-            pageScroll.drawsBackground = false
-            pageScroll.documentView = textView
-
-            pageScroll.wantsLayer = true
-            pageScroll.layer?.backgroundColor = NSColor.white.cgColor
-            pageScroll.layer?.shadowColor = NSColor.black.withAlphaComponent(0.15).cgColor
-            pageScroll.layer?.shadowRadius = 8
-            pageScroll.layer?.shadowOffset = CGSize(width: 0, height: -4)
-            pageScroll.layer?.shadowOpacity = 1
-
-            container.addSubview(pageScroll)
-            pageScrolls.append(pageScroll)
-
-            parent.viewModel.setTextView(textView)
-        }
-
-        /// Resize container to fit all pages
-        private func layoutContainer() {
-            guard let container = containerView else { return }
-            let height = CGFloat(pageScrolls.count) * (pageSize.height + pageSpacing) - pageSpacing
-            container.frame = NSRect(x: 0,
-                                     y: 0,
-                                     width: pageSize.width,
-                                     height: height)
-        }
-
-        // MARK: - NSTextViewDelegate
+        
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
-            parent.viewModel.attributedString = NSMutableAttributedString(attributedString: textView.attributedString())
-            parent.viewModel.document.content = textView.string
-            checkAndAddPagesIfNeeded()
-        }
-
-        func textViewDidChangeSelection(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else { return }
-            Task { @MainActor in
-                await Task.yield()
-                parent.viewModel.selectedRange = textView.selectedRange()
-                parent.viewModel.updateFormattingFromSelection()
+            
+            // Update the view model content
+            parent.viewModel.updateContent(textView.string)
+            
+            // Update formatting based on current selection
+            parent.viewModel.updateFormattingFromSelection()
+            
+            // Trigger page count recalculation
+            DispatchQueue.main.async {
+                self.parent.viewModel.objectWillChange.send()
             }
+        }
+        
+        func textViewDidChangeSelection(_ notification: Notification) {
+            // Update formatting when selection changes
+            parent.viewModel.updateFormattingFromSelection()
+        }
+    }
+}
+
+// MARK: - Dynamic Paging Manager
+final class DynamicPagingManager: ObservableObject {
+    @Published var textContainers: [NSTextContainer] = []
+    
+    let textStorage: NSTextStorage
+    let layoutManager: NSLayoutManager
+    private let pageSize = CGSize(width: 612 - 72, height: 792 - 72)
+    private var minimumPages: Int
+    
+    init(attributedString: NSAttributedString, minimumPages: Int = 1) {
+        self.minimumPages = minimumPages
+        
+        // Initialize TextKit stack
+        textStorage = NSTextStorage(attributedString: attributedString)
+        layoutManager = NSLayoutManager()
+        textStorage.addLayoutManager(layoutManager)
+        
+        // Create initial containers
+        createContainers(count: minimumPages)
+        
+        // Set up observation for text changes
+        setupTextStorageObservation()
+    }
+    
+    private func setupTextStorageObservation() {
+        NotificationCenter.default.addObserver(
+            forName: NSTextStorage.didProcessEditingNotification,
+            object: textStorage,
+            queue: .main
+        ) { [weak self] _ in
+            self?.adjustPageCountIfNeeded()
+        }
+    }
+    
+    private func createContainers(count: Int) {
+        // Remove existing containers
+        textContainers.forEach { container in
+            if let index = layoutManager.textContainers.firstIndex(of: container) {
+                layoutManager.removeTextContainer(at: index)
+            }
+        }
+        textContainers.removeAll()
+        
+        // Create new containers
+        for _ in 0..<count {
+            let container = NSTextContainer(size: pageSize)
+            container.widthTracksTextView = true
+            container.heightTracksTextView = false
+            layoutManager.addTextContainer(container)
+            textContainers.append(container)
+        }
+    }
+    
+    private func adjustPageCountIfNeeded() {
+        let requiredPages = calculateRequiredPages()
+        let currentPages = textContainers.count
+        
+        if requiredPages != currentPages {
+            DispatchQueue.main.async {
+                self.createContainers(count: requiredPages)
+            }
+        }
+    }
+    
+    private func calculateRequiredPages() -> Int {
+            // Force layout to complete for all containers
+            for container in textContainers {
+                layoutManager.ensureLayout(for: container)
+            }
+            
+            // Check if we have overflow in any container
+            var requiredPages = minimumPages
+            
+            for (index, container) in textContainers.enumerated() {
+                let glyphRange = layoutManager.glyphRange(for: container)
+                let usedRect = layoutManager.usedRect(for: container)
+                
+                // Check if this container is nearly full or has overflow
+                if usedRect.height > pageSize.height * 0.9 {
+                    requiredPages = max(requiredPages, index + 2) // Need at least one more page
+                }
+                
+                // If this container has text, we need at least this many pages
+                if glyphRange.length > 0 {
+                    requiredPages = max(requiredPages, index + 1)
+                }
+            }
+        
+        // Check for any remaining text that doesn't fit
+        let totalGlyphRange = NSRange(location: 0, length: layoutManager.numberOfGlyphs)
+        var coveredRange = NSRange(location: 0, length: 0)
+        
+        for container in textContainers {
+            let containerRange = layoutManager.glyphRange(for: container)
+            coveredRange = NSUnionRange(coveredRange, containerRange)
+        }
+        
+        // If we haven't covered all text, we need more pages
+        if coveredRange.length < totalGlyphRange.length {
+            requiredPages += 1
+        }
+        
+        return max(minimumPages, requiredPages)
+    }
+    
+    func updateContent(_ newString: NSAttributedString) {
+        textStorage.setAttributedString(newString)
+        // Page adjustment will happen automatically via the notification observer
+    }
+    
+    func updateMinimumPages(_ count: Int) {
+        minimumPages = max(1, count)
+        adjustPageCountIfNeeded()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+}
+// 3) The SwiftUI view that lays out pages once, then updates
+struct PaginatedDocumentView: View {
+    @ObservedObject var viewModel: DocumentViewModel
+    @StateObject private var pagingManager: DynamicPagingManager
+    
+    init(viewModel: DocumentViewModel) {
+        self.viewModel = viewModel
+        _pagingManager = StateObject(wrappedValue:
+            DynamicPagingManager(
+                attributedString: viewModel.attributedString,
+                minimumPages: 1
+            )
+        )
+    }
+    
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: true) {
+            LazyVStack(spacing: 20) {
+                ForEach(pagingManager.textContainers.indices, id: \.self) { index in
+                    ZStack {
+                        // Simple page background
+                        Rectangle()
+                            .fill(Color.white)
+                            .shadow(color: .gray.opacity(0.3), radius: 4, x: 2, y: 2)
+                        
+                        // Page content
+                        PageView(
+                            layoutManager: pagingManager.layoutManager,
+                            textContainer: pagingManager.textContainers[index],
+                            viewModel: viewModel
+                        )
+                        .padding(20)
+                    }
+                    .frame(width: 612, height: 792)
+                }
+            }
+            .padding(20)
+        }
+        .background(Color.gray.opacity(0.2))
+        .onChange(of: viewModel.attributedString) { newValue in
+            pagingManager.updateContent(newValue)
         }
     }
 }

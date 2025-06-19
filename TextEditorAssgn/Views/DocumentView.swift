@@ -10,64 +10,65 @@ import AppKit
 
 struct DocumentView: View {
     @ObservedObject var viewModel: DocumentViewModel
-    //@State private var textContent = "Start typing your document here..."
+    @StateObject private var pagingManager: DynamicPagingManager
+    
+    init(viewModel: DocumentViewModel) {
+        self.viewModel = viewModel
+        _pagingManager = StateObject(wrappedValue:
+            DynamicPagingManager(
+                attributedString: viewModel.attributedString,
+                minimumPages: max(1, viewModel.pageCount)
+            )
+        )
+    }
     
     var body: some View {
         GeometryReader { geometry in
-            ScrollView {
-                VStack {
-                    Spacer(minLength: 40)
-                    
-                    // Document Paper
-                    ZStack {
-                        Rectangle()
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-                        
-                        VStack(spacing: 30) {
-//                            PaginatedTextEditor(viewModel: viewModel)
-//                                .padding(50)
-//                                .background(Color.white)
-                            RichTextEditor(viewModel: viewModel)
-                                .padding(50)
-                                .background(Color.white)
+            Color(red: 0.95, green: 0.95, blue: 0.95)
+                .ignoresSafeArea()
+                .overlay(
+                    ScrollView(.vertical, showsIndicators: true) {
+                        LazyVStack(spacing: 30) {
+                            ForEach(pagingManager.textContainers.indices, id: \.self) { index in
+                                pageView(at: index)
+                            }
                         }
+                        .padding(.vertical, 40)
                     }
-                    .frame(width: 609, height: 860) // A4 size at 72 DPI
-                   // .frame(width: 767, height: 991) // exact size for -- 125 zoom
-                    
-                    Spacer(minLength: 40)
-                }
-                .frame(maxWidth: .infinity)
-            }
-//            .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                )
+        }
+        .onChange(of: viewModel.attributedString) { newValue in
+            pagingManager.updateContent(newValue)
+        }
+        .onChange(of: viewModel.pageCount) { newCount in
+            pagingManager.updateMinimumPages(newCount)
         }
     }
     
-    private var documentFont: Font {
-        var font = Font.custom(viewModel.document.fontName, size: viewModel.document.fontSize)
-        
-        if viewModel.document.isBold {
-            font = font.bold()
+    private func pageView(at index: Int) -> some View {
+        ZStack {
+            // Paper background with shadow
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+            
+            // Page content
+            PageView(
+                layoutManager: pagingManager.layoutManager,
+                textContainer: pagingManager.textContainers[index],
+                viewModel: viewModel
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(EdgeInsets(top: 72, leading: 72, bottom: 72, trailing: 72))
         }
-        if viewModel.document.isItalic {
-            font = font.italic()
-        }
-        
-        return font
-    }
-    
-    private var swiftUIAlignment: TextAlignment {
-        switch viewModel.document.textAlignment {
-        case .leading: return .leading
-        case .center: return .center
-        case .trailing: return .trailing
-        case .justified: return .leading
-        }
+        .frame(width: 612, height: 792)
     }
 }
-
-struct DocumentView_Previews: PreviewProvider { static var previews: some View { DocumentView(viewModel: DocumentViewModel()) } }
+struct DocumentView_Previews: PreviewProvider {
+    static var previews: some View {
+        DocumentView(viewModel: DocumentViewModel())
+    }
+}
 
 
 

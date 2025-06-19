@@ -103,22 +103,69 @@ class ExportManager: ObservableObject {
 
 
     // MARK: - Private File Creation Methods
+    
+    // this has problems like the thing is not in A4 or whatever the editor is
+    
+//    private func createPDF(textView: NSTextView, at url: URL) {
+//        // Generates PDF data from the view's printable area.
+//        let pdfData = textView.dataWithPDF(inside: textView.bounds)
+//
+//        do {
+//            try pdfData.write(to: url)
+//            DispatchQueue.main.async {
+//                self.showExportSuccess(format: "PDF", url: url)
+//            }
+//        } catch {
+//            DispatchQueue.main.async {
+//                self.showExportError(error: error)
+//            }
+//        }
+//    }
+    
+        private func createPDF(textView: NSTextView, at url: URL) {
+            // OPTION 1 START — NSPrintOperation on an NSView
+            // 1) Embed your SwiftUI editor view in a hosting view:
+            let editorVM = DocumentViewModel()
+            let editorHostingView = NSHostingView(
+                rootView: DocumentView(viewModel: editorVM)
+            )
+            
+            // 2) Size to US‑Letter (8½"×11" at 72 dpi):
+            let pageSize = CGSize(width: 612, height: 792)
+            editorHostingView.frame = CGRect(origin: .zero, size: pageSize)
 
-    private func createPDF(textView: NSTextView, at url: URL) {
-        // Generates PDF data from the view's printable area.
-        let pdfData = textView.dataWithPDF(inside: textView.bounds)
+            // 3) Configure printing info:
+            let printInfo = NSPrintInfo.shared
+            printInfo.paperSize = pageSize
+            printInfo.topMargin = 36
+            printInfo.bottomMargin = 36
+            printInfo.leftMargin = 36
+            printInfo.rightMargin = 36
 
-        do {
-            try pdfData.write(to: url)
-            DispatchQueue.main.async {
-                self.showExportSuccess(format: "PDF", url: url)
+            // 4) Tell the print system to save directly to our URL:
+            // Use the dedicated properties rather than modifying the dictionary
+            printInfo.jobDisposition = .save
+            let key = NSPrintInfo.AttributeKey.jobSavingURL
+            printInfo.dictionary()[key] = url
+
+            // 5) Create and run the print operation:
+            let printOp = NSPrintOperation(view: editorHostingView, printInfo: printInfo)
+            printOp.showsPrintPanel = false
+            printOp.showsProgressPanel = false
+
+            // Running the operation will write the PDF to `url`
+            if printOp.run() {
+                DispatchQueue.main.async {
+                    self.showExportSuccess(format: "PDF", url: url)
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.showExportError(message: "Failed to generate PDF via print operation.")
+                }
             }
-        } catch {
-            DispatchQueue.main.async {
-                self.showExportError(error: error)
-            }
+            // OPTION 1 END
         }
-    }
+    
 
     private func createRTF(textView: NSTextView, at url: URL) {
         guard let textStorage = textView.textStorage else {
